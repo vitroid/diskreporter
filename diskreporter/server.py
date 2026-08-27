@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""stdlib-only HTTP server. Python 2.6+ / 3.x. No pip packages."""
+"""stdlib-only HTTP server. Python 2.6+ / 3.x. No pip packages.
+
+ThreadingMixIn + HTTP/1.0 close. A single-thread BaseHTTPServer treats
+HTTP/1.1 keep-alive as persistent and blocks all other clients (false
+unreachable alarms in LoadMeters).
+"""
 from __future__ import print_function
 
 import json
@@ -14,6 +19,11 @@ try:
     from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer
+
+try:
+    from SocketServer import ThreadingMixIn
+except ImportError:
+    from socketserver import ThreadingMixIn
 
 from diskreporter import __version__
 from diskreporter.config import load_config
@@ -84,6 +94,17 @@ def _loop(fn, seconds, minimum):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.0"
+    timeout = 10
+
+    def setup(self):
+        BaseHTTPRequestHandler.setup(self)
+        self.close_connection = 1
+
+    def handle(self):
+        self.close_connection = 1
+        self.handle_one_request()
+
     def log_message(self, fmt, *args):
         _log.info("%s - " + fmt, self.address_string(), *args)
 
@@ -98,10 +119,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(body)
             return
         self.send_error(404)
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
 
 
 def main():
@@ -130,7 +157,7 @@ def main():
     t_users.daemon = True
     t_fast.start()
     t_users.start()
-    httpd = HTTPServer((host, port), Handler)
+    httpd = ThreadingHTTPServer((host, port), Handler)
     _log.info("listening on http://%s:%s/v1/info", host, port)
     try:
         httpd.serve_forever()

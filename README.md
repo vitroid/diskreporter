@@ -5,6 +5,8 @@ LoadMeters が mDNS (`_diskreporter._tcp`) で発見し、`GET /v1/info` を低�
 
 Python **2.6 以降**（CentOS 6 の標準 Python を含む）と 3.x。pip パッケージは不要です（標準ライブラリのみ）。
 
+HTTP は `SocketServer.ThreadingMixIn`（Python 3 では `socketserver`）付きの stdlib サーバです。接続は HTTP/1.0 で必ず閉じます。単スレッドの `BaseHTTPServer` だと、HTTP/1.1 keep-alive でサーバ全体が止まり、LoadMeters が誤って unreachable になります。
+
 ## 報告する内容
 
 `GET /v1/info`（例: `http://localhost:8087/v1/info`）
