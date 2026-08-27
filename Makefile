@@ -8,6 +8,8 @@ install:
 	sudo mkdir -p /opt/diskreporter/diskreporter
 	sudo cp -a diskreporter/*.py /opt/diskreporter/diskreporter/
 	sudo chmod -R 755 /opt/diskreporter
+	@echo "$(PYTHON)" | sudo tee /opt/diskreporter/python >/dev/null
+	@echo "Pinned runtime python: $(PYTHON)"
 	test -f /etc/diskreporter.json || sudo install -m 0644 diskreporter.json.example /etc/diskreporter.json
 	@if [ -d /etc/avahi/services ]; then \
 		sudo install -m 0644 avahi/diskreporter.service /etc/avahi/services/; \

@@ -10,25 +10,48 @@
 # Short-Description: DiskReporter
 ### END INIT INFO
 
+PATH=/usr/local/bin:/usr/bin:/bin
+export PATH
+
 DAEMON=/usr/local/bin/diskreporter
 [ -x "$DAEMON" ] || DAEMON=/usr/bin/diskreporter
 PIDFILE=/var/run/diskreporter.pid
 LOGFILE=/var/log/diskreporter.log
 
 start() {
-    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
         echo "diskreporter already running"
         return 0
     fi
+    if [ ! -x "$DAEMON" ]; then
+        echo "diskreporter: $DAEMON not found" >&2
+        return 1
+    fi
     echo "Starting diskreporter"
-    nohup "$DAEMON" >>"$LOGFILE" 2>&1 &
+    touch "$LOGFILE"
+    nohup "$DAEMON" >>"$LOGFILE" 2>&1 </dev/null &
     echo $! > "$PIDFILE"
+    sleep 1
+    if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        return 0
+    fi
+    echo "diskreporter failed to start; last log lines:" >&2
+    tail -n 40 "$LOGFILE" >&2
+    rm -f "$PIDFILE"
+    return 1
 }
 
 stop() {
     if [ -f "$PIDFILE" ]; then
         echo "Stopping diskreporter"
-        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        pid=$(cat "$PIDFILE")
+        kill "$pid" 2>/dev/null || true
+        i=0
+        while [ $i -lt 10 ] && kill -0 "$pid" 2>/dev/null; do
+            sleep 1
+            i=$((i + 1))
+        done
+        kill -9 "$pid" 2>/dev/null || true
         rm -f "$PIDFILE"
     fi
 }
@@ -36,7 +59,7 @@ stop() {
 case "$1" in
     start) start ;;
     stop) stop ;;
-    restart) stop; start ;;
+    restart) stop; sleep 1; start ;;
     status)
         if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
             echo "running pid $(cat "$PIDFILE")"

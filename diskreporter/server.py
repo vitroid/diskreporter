@@ -144,7 +144,10 @@ def main():
         len(_config.get("volumes") or []),
         sys.version.split()[0],
     )
-    refresh_fast()
+    try:
+        refresh_fast()
+    except Exception:
+        _log.exception("initial raid/df refresh failed")
     t_fast = threading.Thread(
         target=_loop,
         args=(refresh_fast, _config.get("raid_scan_seconds"), 30),
@@ -163,6 +166,9 @@ def main():
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
+    except Exception:
+        _log.exception("server crashed")
+        raise
 
 
 if __name__ == "__main__":
