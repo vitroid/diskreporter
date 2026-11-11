@@ -126,7 +126,7 @@ def parse_arcconf_pd(text):
         if current is None:
             continue
         if line.startswith("Device is "):
-            current["_kind"] = line[len("Device is "):]
+            current["_kind"] = re.sub(r"^an? ", "", line[len("Device is "):])
             continue
         key, value = _kv(line)
         if key and key not in current:
@@ -165,7 +165,7 @@ def parse_arcconf_pd(text):
             "location": location,
             "kind": kind,
             "state": state,
-            "ok": state.lower().startswith(PD_GOOD_STATES),
+            "ok": state.lower().replace("-", " ").startswith(PD_GOOD_STATES),
             "vendor": b.get("Vendor") or "",
             "model": b.get("Model") or "",
             "serial": b.get("Serial number") or "",

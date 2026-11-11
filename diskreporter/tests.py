@@ -81,6 +81,10 @@ Physical Device information
       Device #2
          Device is an Enclosure services device
          Reported Location                  : Enclosure 0
+      Device #3
+         Device is a Hard drive
+         State                              : Global Hot-Spare
+         Reported Location                  : Enclosure 0, Slot 23(Connector 0)
 """
 
 ARCCONF_AD = """Controllers found: 1
@@ -109,8 +113,10 @@ def main():
     assert not mdbad["ok"], mdbad
 
     disks = parse_arcconf_pd(ARCCONF_PD)
-    assert len(disks) == 2, disks
+    assert len(disks) == 3, disks
     assert disks[0]["slot"] == "0" and disks[0]["ok"] and disks[0]["temperature"] == 38, disks[0]
+    assert disks[0]["kind"] == "Hard drive", disks[0]
+    assert disks[2]["slot"] == "23" and disks[2]["ok"], disks[2]
     assert disks[0]["errors"] == {"Medium Error": 3} and not disks[0]["warnings"], disks[0]
     assert disks[1]["slot"] == "1:2" and not disks[1]["ok"] and len(disks[1]["warnings"]) == 2, disks[1]
     ctrl = parse_arcconf_ad(ARCCONF_AD)
